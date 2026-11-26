@@ -46,15 +46,10 @@ jobs:
 
     steps:
       - name: Install prerequisites
-        run: |
-          apt update
-          apt install -y time unzip git-lfs gmsh gcc cmake libsqlite3-dev libhwloc-dev \
-              patchelf libgl1-mesa-dev libglu1-mesa-dev libglew-dev \
-              libboost-dev libboost-python-dev libboost-thread-dev libboost-program-options-dev \
-              libqt5opengl5-dev libqt5svg5-dev libqwt-qt5-dev libqt5xmlpatterns5-dev \
-              libgdal-dev libcgal-dev libproj-dev proj-bin zlib1g-dev \
-              libgtest-dev
-          git config --global --add safe.directory $GITHUB_WORKSPACE
+        uses: $/.github/actions/install-system-dependencies
+        with:
+          extra-packages: >-
+            time gcc cmake libsqlite3-dev libhwloc-dev libgtest-dev
 
       - name: Fix OpenMPI installation
         run: |
