@@ -55,16 +55,17 @@ jobs:
           git config --global --add safe.directory $GITHUB_WORKSPACE
           git lfs checkout
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - name: Set up Python environment
+        uses: $/.github/actions/setup-python-environment
+        with:
+          extras: demos,optimisation
+          extra-packages: nbval nbconvert jupytext siphash24
 
-      - name: Install Python dependencies
+      - name: Install Animate
         run: |
-          uv venv --system-site-packages
-          uv pip install 'pygplates @ git+https://github.com/dsroberts/GPlates.git@PyGPlates-1.0.0'
-          uv pip install nbval nbconvert jupytext siphash24 .[demos,optimisation]
           uv cache clean animate
-          uv pip install --no-build-isolation git+https://github.com/mesh-adaptation/animate
+          uv pip install --no-build-isolation \
+            git+https://github.com/mesh-adaptation/animate
 
       - name: Get Muller et al 2022 plate reconstructions
         run: |

@@ -62,13 +62,15 @@ jobs:
             ln -s /usr/share/doc/libprrte-dev /usr/lib/x86_64-linux-gnu/prrte3/share/prte
         shell: bash
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
       - uses: actions/checkout@v5
         with:
           lfs: true
           persist-credentials: false
+
+      - name: Set up Python environment
+        uses: $/.github/actions/setup-python-environment
+        with:
+          extras: demos,optimisation,gplates
 
       - name: Fetch LFS artifacts
         run: |
@@ -87,12 +89,6 @@ jobs:
           cmake ./tsp -B ./tsp_build
           cmake --build ./tsp_build
           mv ./tsp_build/tsp-hpc /usr/local/bin/tsp
-
-      - name: Install Python dependencies
-        run: |
-          uv venv --system-site-packages
-          uv pip install 'pygplates @ git+https://github.com/dsroberts/GPlates.git@PyGPlates-1.0.0'
-          uv pip install .[demos,optimisation,gplates]
 
       - name: Check out repository linked to Trim et al. (2023)
         uses: actions/checkout@v5

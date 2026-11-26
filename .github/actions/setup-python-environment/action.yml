@@ -1,0 +1,39 @@
+name: Set up Python environment
+description: Install G-ADOPT into a uv-managed virtual environment
+
+inputs:
+  extras:
+    description: G-ADOPT extras to install
+    required: false
+    default: ""
+  extra-packages:
+    description: Additional Python packages to install
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Install uv
+      uses: astral-sh/setup-uv@1db35dd8eee11c5894872e0b383ae6c406cf738d # v10.4.0
+
+    - name: Create virtual environment
+      shell: bash
+      run: uv venv --system-site-packages
+
+    - name: Install PyGPlates override
+      shell: bash
+      run: |
+        uv pip install 'pygplates @ git+https://github.com/dsroberts/GPlates.git@PyGPlates-1.0.0'
+
+    - name: Install Python dependencies
+      shell: bash
+      env:
+        GADOPT_EXTRAS: ${{ inputs.extras }}
+        EXTRA_PACKAGES: ${{ inputs.extra-packages }}
+      run: |
+        package=.
+        if [[ -n "$GADOPT_EXTRAS" ]]; then
+          package=".[$GADOPT_EXTRAS]"
+        fi
+        uv pip install "$package" $EXTRA_PACKAGES
