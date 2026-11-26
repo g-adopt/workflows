@@ -106,6 +106,10 @@ jobs:
           include-hidden-files: true
           if-no-files-found: error
 
+      - name: Cleanup caches
+        if: always()
+        uses: $/.github/actions/cleanup-caches
+
   dispatch:
     name: Trigger documentation build
     needs: render
