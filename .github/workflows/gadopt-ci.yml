@@ -123,7 +123,15 @@ jobs:
         id: run_pytest
         run: |
           . .venv/bin/activate
-          python -m pytest -m 'not longtest' --junit-xml=test_results.xml
+          python -m pytest -m 'not longtest' --junit-xml=test_results.xml \
+            --store-durations --durations-path=tests/test_durations.json
+
+      - name: Upload durations
+        if: ${{ !cancelled() && steps.run_pytest.conclusion != 'skipped' }}
+        uses: actions/upload-artifact@v6.0.0
+        with:
+          name: test-durations
+          path: tests/test_durations.json
 
       - name: Pytest report
         uses: mikepenz/action-junit-report@v6.7.1
