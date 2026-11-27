@@ -46,15 +46,10 @@ jobs:
 
     steps:
       - name: Install prerequisites
-        run: |
-          apt update
-          apt install -y time unzip git-lfs gmsh gcc cmake libsqlite3-dev libhwloc-dev \
-              patchelf libgl1-mesa-dev libglu1-mesa-dev libglew-dev \
-              libboost-dev libboost-python-dev libboost-thread-dev libboost-program-options-dev \
-              libqt5opengl5-dev libqt5svg5-dev libqwt-qt5-dev libqt5xmlpatterns5-dev \
-              libgdal-dev libcgal-dev libproj-dev proj-bin zlib1g-dev \
-              libgtest-dev
-          git config --global --add safe.directory $GITHUB_WORKSPACE
+        uses: $/.github/actions/install-system-dependencies
+        with:
+          extra-packages: >-
+            time gcc cmake libsqlite3-dev libhwloc-dev libgtest-dev
 
       - name: Fix OpenMPI installation
         run: |
@@ -67,20 +62,22 @@ jobs:
             ln -s /usr/share/doc/libprrte-dev /usr/lib/x86_64-linux-gnu/prrte3/share/prte
         shell: bash
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
-
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v5.1.0
         with:
           lfs: true
           persist-credentials: false
+
+      - name: Set up Python environment
+        uses: $/.github/actions/setup-python-environment
+        with:
+          extras: demos,optimisation,gplates
 
       - name: Fetch LFS artifacts
         run: |
           git lfs checkout
 
       - name: Fetch task spooler
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5.1.0
         with:
           repository: dsroberts/tsp_for_hpc
           path: ./tsp
@@ -93,14 +90,8 @@ jobs:
           cmake --build ./tsp_build
           mv ./tsp_build/tsp-hpc /usr/local/bin/tsp
 
-      - name: Install Python dependencies
-        run: |
-          uv venv --system-site-packages
-          uv pip install 'pygplates @ git+https://github.com/dsroberts/GPlates.git@PyGPlates-1.0.0'
-          uv pip install .[demos,optimisation,gplates]
-
       - name: Check out repository linked to Trim et al. (2023)
-        uses: actions/checkout@v5
+        uses: actions/checkout@v5.1.0
         with:
           repository: seantrim/exact-thermochem-solution
           path: ./flib
@@ -135,7 +126,7 @@ jobs:
           python -m pytest -m 'not longtest' --junit-xml=test_results.xml
 
       - name: Pytest report
-        uses: mikepenz/action-junit-report@v6
+        uses: mikepenz/action-junit-report@v6.7.1
         if: ${{ !cancelled() && steps.run_pytest.conclusion != 'skipped' }}
         with:
           check_name: Test suite report
@@ -151,24 +142,11 @@ jobs:
 
       - name: Upload run log
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v6.0.0
         with:
           name: run-log
           path: /tmp/tsp_db.sqlite3
 
-      - name: Cleanup temporary files
+      - name: Cleanup caches
         if: always()
-        shell: bash
-        run: |
-          uv cache prune --ci
-          # see https://github.com/inducer/pytools/blob/main/pytools/persistent_dict.py#L484
-          export PYTOOLS_CACHE_DIR=$(
-            .venv/bin/python -c \
-              'import platformdirs; print(platformdirs.user_cache_dir("pytools","pytools"))'
-          )
-          if [[ "${PYTOOLS_CACHE_DIR}" ]]; then
-            echo Cleaning pytools persistent dicts from "${PYTOOLS_CACHE_DIR}"
-            rm -rf --preserve-root=all "${PYTOOLS_CACHE_DIR}"
-          else
-            echo PYTOOLS_CACHE_DIR could not be determined
-          fi
+        uses: $/.github/actions/cleanup-caches

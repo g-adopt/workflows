@@ -30,11 +30,12 @@ jobs:
       UV_EXCLUDE: ${{ github.workspace }}/.uv-exclude.txt
 
     steps:
-      - name: Install Git LFS
-        run: |
-          apt update
-          apt install -y git-lfs
-      - uses: actions/checkout@v5
+      - name: Install prerequisites
+        uses: $/.github/actions/install-system-dependencies
+        with:
+          extra-packages: gh iproute2 uidmap xvfb
+
+      - uses: actions/checkout@v5.1.0
         with:
           lfs: true
           persist-credentials: false
@@ -54,22 +55,17 @@ jobs:
           git config --global --add safe.directory $GITHUB_WORKSPACE
           git lfs checkout
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v7
+      - name: Set up Python environment
+        uses: $/.github/actions/setup-python-environment
+        with:
+          extras: demos,optimisation
+          extra-packages: nbval nbconvert jupytext siphash24
 
-      - name: Install dependencies
+      - name: Install Animate
         run: |
-          apt install -y xvfb gmsh gh unzip \
-              patchelf libgl1-mesa-dev libglu1-mesa-dev libglew-dev \
-              libboost-dev libboost-python-dev libboost-thread-dev libboost-program-options-dev \
-              libqt5opengl5-dev libqt5svg5-dev libqwt-qt5-dev libqt5xmlpatterns5-dev \
-              libgdal-dev libcgal-dev libproj-dev proj-bin zlib1g-dev
-
-          uv venv --system-site-packages
-          uv pip install 'pygplates @ git+https://github.com/dsroberts/GPlates.git@PyGPlates-1.0.0'
-          uv pip install nbval nbconvert jupytext siphash24 .[demos,optimisation]
           uv cache clean animate
-          uv pip install --no-build-isolation git+https://github.com/mesh-adaptation/animate
+          uv pip install --no-build-isolation \
+            git+https://github.com/mesh-adaptation/animate
 
       - name: Get Muller et al 2022 plate reconstructions
         run: |
@@ -83,7 +79,6 @@ jobs:
 
       - name: Set up for network namespacing
         run: |
-          apt install -y uidmap iproute2
           . .venv/bin/activate
           nbconvert_location="$(which jupyter-nbconvert)"
           cp .testing/jupyter-nbconvert "$nbconvert_location"
@@ -103,13 +98,17 @@ jobs:
           tar -xf artifact.tar -C rendered
         env:
           GADOPT_LOGLEVEL: WARN
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v6.0.0
         if: ${{ !cancelled() }}
         with:
           name: notebooks
           path: rendered
           include-hidden-files: true
           if-no-files-found: error
+
+      - name: Cleanup caches
+        if: always()
+        uses: $/.github/actions/cleanup-caches
 
   dispatch:
     name: Trigger documentation build
